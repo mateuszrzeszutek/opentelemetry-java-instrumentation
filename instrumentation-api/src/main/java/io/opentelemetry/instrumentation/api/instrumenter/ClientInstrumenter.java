@@ -5,43 +5,42 @@
 
 package io.opentelemetry.instrumentation.api.instrumenter;
 
-import io.opentelemetry.api.OpenTelemetry;
 import io.opentelemetry.api.trace.SpanKind;
+import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapSetter;
 
-public abstract class ClientInstrumenter<REQUEST, CARRIER, RESPONSE>
-    extends Instrumenter<REQUEST, RESPONSE> {
+final class ClientInstrumenter<REQUEST, RESPONSE> extends Instrumenter<REQUEST, RESPONSE> {
 
   private final ContextPropagators propagators;
-  private final TextMapSetter<CARRIER> setter;
+  private final TextMapSetter<REQUEST> setter;
 
-  protected ClientInstrumenter(
-      OpenTelemetry openTelemetry,
-      String instrumentationName,
+  ClientInstrumenter(
+      Tracer tracer,
       SpanNameExtractor<? super REQUEST> spanNameExtractor,
+      SpanKind spanKind,
       StatusExtractor<? super REQUEST, ? super RESPONSE> statusExtractor,
-      TextMapSetter<CARRIER> setter,
       Iterable<? extends AttributesExtractor<? super REQUEST, ? super RESPONSE>>
-          attributesExtractors) {
+          attributesExtractors,
+      ErrorCauseExtractor errorCauseExtractor,
+      ContextPropagators propagators,
+      TextMapSetter<REQUEST> setter) {
     super(
-        openTelemetry.getTracer(instrumentationName),
+        tracer,
         spanNameExtractor,
+        spanKind,
         statusExtractor,
-        attributesExtractors);
-    propagators = openTelemetry.getPropagators();
+        attributesExtractors,
+        errorCauseExtractor);
+    this.propagators = propagators;
     this.setter = setter;
   }
 
-  public Context start(Context parentContext, REQUEST request, CARRIER carrier) {
-    Context newContext = super.start(parentContext, request);
-    propagators.getTextMapPropagator().inject(newContext, carrier, setter);
-    return newContext;
-  }
-
   @Override
-  protected SpanKind spanKind(REQUEST request) {
-    return SpanKind.CLIENT;
+  public Context start(Context parentContext, REQUEST request) {
+    Context newContext = super.start(parentContext, request);
+    propagators.getTextMapPropagator().inject(newContext, request, setter);
+    return newContext;
   }
 }

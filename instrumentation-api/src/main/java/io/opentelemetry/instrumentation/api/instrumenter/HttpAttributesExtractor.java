@@ -5,7 +5,7 @@
 
 package io.opentelemetry.instrumentation.api.instrumenter;
 
-import io.opentelemetry.api.common.AttributesBuilder;
+import io.opentelemetry.instrumentation.api.tracer.AttributeSetter;
 import io.opentelemetry.semconv.trace.attributes.SemanticAttributes;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -13,38 +13,38 @@ public abstract class HttpAttributesExtractor<REQUEST, RESPONSE>
     extends AttributesExtractor<REQUEST, RESPONSE> {
 
   @Override
-  final void onStart(AttributesBuilder attributes, REQUEST request) {
-    set(attributes, SemanticAttributes.HTTP_METHOD, method(request));
-    set(attributes, SemanticAttributes.HTTP_URL, url(request));
-    set(attributes, SemanticAttributes.HTTP_TARGET, target(request));
-    set(attributes, SemanticAttributes.HTTP_HOST, host(request));
-    set(attributes, SemanticAttributes.HTTP_ROUTE, route(request));
-    set(attributes, SemanticAttributes.HTTP_SCHEME, scheme(request));
-    set(attributes, SemanticAttributes.HTTP_USER_AGENT, userAgent(request));
+  final void onStart(AttributeSetter setter, REQUEST request) {
+    set(setter, SemanticAttributes.HTTP_METHOD, method(request));
+    set(setter, SemanticAttributes.HTTP_URL, url(request));
+    set(setter, SemanticAttributes.HTTP_TARGET, target(request));
+    set(setter, SemanticAttributes.HTTP_HOST, host(request));
+    set(setter, SemanticAttributes.HTTP_ROUTE, route(request));
+    set(setter, SemanticAttributes.HTTP_SCHEME, scheme(request));
+    set(setter, SemanticAttributes.HTTP_USER_AGENT, userAgent(request));
   }
 
   @Override
-  final void onEnd(AttributesBuilder attributes, REQUEST request, RESPONSE response) {
+  final void onEnd(AttributeSetter setter, REQUEST request, RESPONSE response) {
     set(
-        attributes,
+        setter,
         SemanticAttributes.HTTP_REQUEST_CONTENT_LENGTH,
         requestContentLength(request, response));
     set(
-        attributes,
+        setter,
         SemanticAttributes.HTTP_REQUEST_CONTENT_LENGTH_UNCOMPRESSED,
         requestContentLengthUncompressed(request, response));
-    set(attributes, SemanticAttributes.HTTP_STATUS_CODE, statusCode(request, response));
-    set(attributes, SemanticAttributes.HTTP_FLAVOR, flavor(request, response));
+    set(setter, SemanticAttributes.HTTP_STATUS_CODE, statusCode(request, response));
+    set(setter, SemanticAttributes.HTTP_FLAVOR, flavor(request, response));
     set(
-        attributes,
+        setter,
         SemanticAttributes.HTTP_RESPONSE_CONTENT_LENGTH,
         responseContentLength(request, response));
     set(
-        attributes,
+        setter,
         SemanticAttributes.HTTP_RESPONSE_CONTENT_LENGTH_UNCOMPRESSED,
         responseContentLengthUncompressed(request, response));
-    set(attributes, SemanticAttributes.HTTP_SERVER_NAME, serverName(request, response));
-    set(attributes, SemanticAttributes.HTTP_CLIENT_IP, clientIp(request, response));
+    set(setter, SemanticAttributes.HTTP_SERVER_NAME, serverName(request, response));
+    set(setter, SemanticAttributes.HTTP_CLIENT_IP, clientIp(request, response));
   }
 
   // Attributes that always exist in a request
