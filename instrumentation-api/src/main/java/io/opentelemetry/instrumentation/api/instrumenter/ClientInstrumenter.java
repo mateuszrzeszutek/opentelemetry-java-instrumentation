@@ -5,11 +5,11 @@
 
 package io.opentelemetry.instrumentation.api.instrumenter;
 
-import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.Context;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapSetter;
+import java.util.List;
 
 final class ClientInstrumenter<REQUEST, RESPONSE> extends Instrumenter<REQUEST, RESPONSE> {
 
@@ -19,17 +19,16 @@ final class ClientInstrumenter<REQUEST, RESPONSE> extends Instrumenter<REQUEST, 
   ClientInstrumenter(
       Tracer tracer,
       SpanNameExtractor<? super REQUEST> spanNameExtractor,
-      SpanKind spanKind,
+      SpanKindExtractor<? super REQUEST> spanKindExtractor,
       StatusExtractor<? super REQUEST, ? super RESPONSE> statusExtractor,
-      Iterable<? extends AttributesExtractor<? super REQUEST, ? super RESPONSE>>
-          attributesExtractors,
+      List<? extends AttributesExtractor<? super REQUEST, ? super RESPONSE>> attributesExtractors,
       ErrorCauseExtractor errorCauseExtractor,
       ContextPropagators propagators,
       TextMapSetter<REQUEST> setter) {
     super(
         tracer,
         spanNameExtractor,
-        spanKind,
+        spanKindExtractor,
         statusExtractor,
         attributesExtractors,
         errorCauseExtractor);

@@ -6,16 +6,16 @@
 package io.opentelemetry.instrumentation.api.instrumenter;
 
 import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.instrumentation.api.tracer.AttributeSetter;
+import io.opentelemetry.api.common.AttributesBuilder;
 
 public abstract class AttributesExtractor<REQUEST, RESPONSE> {
-  abstract void onStart(AttributeSetter setter, REQUEST request);
+  abstract void onStart(AttributesBuilder attributes, REQUEST request);
 
-  abstract void onEnd(AttributeSetter setter, REQUEST request, RESPONSE response);
+  abstract void onEnd(AttributesBuilder attributes, REQUEST request, RESPONSE response);
 
-  protected static <T> void set(AttributeSetter setter, AttributeKey<T> key, T value) {
+  protected static <T> void set(AttributesBuilder attributes, AttributeKey<T> key, T value) {
     if (value != null) {
-      setter.setAttribute(key, value);
+      attributes.put(key, value);
     }
   }
 }

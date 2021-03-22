@@ -6,7 +6,6 @@
 package io.opentelemetry.instrumentation.api.instrumenter;
 
 import io.opentelemetry.api.OpenTelemetry;
-import io.opentelemetry.api.trace.SpanKind;
 import io.opentelemetry.api.trace.Tracer;
 import io.opentelemetry.context.propagation.ContextPropagators;
 import io.opentelemetry.context.propagation.TextMapGetter;
@@ -19,42 +18,22 @@ import java.util.List;
 public class InstrumenterBuilder<REQUEST, RESPONSE> {
   private final OpenTelemetry openTelemetry;
   private final String instrumentationName;
-  private InstrumenterConstructor<REQUEST, RESPONSE> constructor =
-      InstrumenterConstructor.internal();
-  private SpanNameExtractor<? super REQUEST> spanNameExtractor;
-  private SpanKind spanKind = SpanKind.INTERNAL;
-  private StatusExtractor<? super REQUEST, ? super RESPONSE> statusExtractor =
-      StatusExtractor.getDefault();
+  private final SpanNameExtractor<? super REQUEST> spanNameExtractor;
+
   private final List<AttributesExtractor<? super REQUEST, ? super RESPONSE>> attributesExtractors =
       new ArrayList<>();
+
+  private StatusExtractor<? super REQUEST, ? super RESPONSE> statusExtractor =
+      StatusExtractor.getDefault();
   private ErrorCauseExtractor errorCauseExtractor = ErrorCauseExtractor.jdk();
 
-  InstrumenterBuilder(OpenTelemetry openTelemetry, String instrumentationName) {
+  InstrumenterBuilder(
+      OpenTelemetry openTelemetry,
+      String instrumentationName,
+      SpanNameExtractor<? super REQUEST> spanNameExtractor) {
     this.openTelemetry = openTelemetry;
     this.instrumentationName = instrumentationName;
-
-    // TODO: does this make any sense for a default? maybe it should be a mandatory param...
-    spanNameExtractor = request -> instrumentationName;
-  }
-
-  public InstrumenterBuilder<REQUEST, RESPONSE> setSpanNameExtractor(
-      SpanNameExtractor<? super REQUEST> spanNameExtractor) {
     this.spanNameExtractor = spanNameExtractor;
-    return this;
-  }
-
-  public InstrumenterBuilder<REQUEST, RESPONSE> setClientSpanKind(TextMapSetter<REQUEST> setter) {
-    this.spanKind = SpanKind.CLIENT;
-    this.constructor =
-        InstrumenterConstructor.propagatingToDownstream(openTelemetry.getPropagators(), setter);
-    return this;
-  }
-
-  public InstrumenterBuilder<REQUEST, RESPONSE> setServerSpanKind(TextMapGetter<REQUEST> getter) {
-    this.spanKind = SpanKind.SERVER;
-    this.constructor =
-        InstrumenterConstructor.propagatingFromUpstream(openTelemetry.getPropagators(), getter);
-    return this;
   }
 
   public InstrumenterBuilder<REQUEST, RESPONSE> setSpanStatusExtractor(
@@ -82,13 +61,31 @@ public class InstrumenterBuilder<REQUEST, RESPONSE> {
     return this;
   }
 
-  public Instrumenter<REQUEST, RESPONSE> build() {
+  public Instrumenter<REQUEST, RESPONSE> newClientInstrumenter(TextMapSetter<REQUEST> setter) {
+    return newInstrumenter(
+        InstrumenterConstructor.propagatingToDownstream(openTelemetry.getPropagators(), setter),
+        SpanKindExtractor.alwaysClient());
+  }
+
+  public Instrumenter<REQUEST, RESPONSE> newServerInstrumenter(TextMapGetter<REQUEST> getter) {
+    return newInstrumenter(
+        InstrumenterConstructor.propagatingFromUpstream(openTelemetry.getPropagators(), getter),
+        SpanKindExtractor.alwaysServer());
+  }
+
+  public Instrumenter<REQUEST, RESPONSE> newInstrumenter() {
+    return newInstrumenter(InstrumenterConstructor.internal(), SpanKindExtractor.alwaysInternal());
+  }
+
+  private Instrumenter<REQUEST, RESPONSE> newInstrumenter(
+      InstrumenterConstructor<REQUEST, RESPONSE> constructor,
+      SpanKindExtractor<? super REQUEST> spanKindExtractor) {
     return constructor.create(
         openTelemetry.getTracer(instrumentationName, InstrumentationVersion.VERSION),
         spanNameExtractor,
-        spanKind,
+        spanKindExtractor,
         statusExtractor,
-        attributesExtractors,
+        new ArrayList<>(attributesExtractors),
         errorCauseExtractor);
   }
 
@@ -96,9 +93,9 @@ public class InstrumenterBuilder<REQUEST, RESPONSE> {
     Instrumenter<RQ, RS> create(
         Tracer tracer,
         SpanNameExtractor<? super RQ> spanNameExtractor,
-        SpanKind spanKind,
+        SpanKindExtractor<? super RQ> spanKindExtractor,
         StatusExtractor<? super RQ, ? super RS> statusExtractor,
-        Iterable<? extends AttributesExtractor<? super RQ, ? super RS>> extractors,
+        List<? extends AttributesExtractor<? super RQ, ? super RS>> extractors,
         ErrorCauseExtractor errorCauseExtractor);
 
     static <RQ, RS> InstrumenterConstructor<RQ, RS> internal() {
